@@ -48,8 +48,8 @@
 %bcond_without  java
 
 %global srcname opencv
-%global abiver  3.4
-%global javaver 344
+%global abiver  4.1
+%global javaver 410
 
 # Required because opencv-core has lot of spurious dependencies
 # (despite supposed to be "-core")
@@ -58,8 +58,8 @@
 %global optflags %(echo %{optflags} -Wl,--as-needed )
 
 Name:           opencv
-Version:        3.4.4
-Release:        10%{?dist}
+Version:        4.1.0
+Release:        1%{?dist}
 Summary:        Collection of algorithms for computer vision
 # This is normal three clause BSD.
 License:        BSD
@@ -71,12 +71,6 @@ URL:            http://opencv.org
 #
 Source0:        %{name}-clean-%{version}.tar.gz
 Source1:        %{name}_contrib-clean-%{version}.tar.gz
-# fix/simplify cmake config install location (upstreamable)
-# https://bugzilla.redhat.com/1031312
-Patch1:         opencv-3.4.1-cmake_paths.patch
-Patch10:        https://github.com/opencv/opencv/pull/13351/commits/c26c43c69c654344d2e2fb7b2d21121ca89224e6.patch
-Patch11:        https://github.com/opencv/opencv_contrib/pull/1905/commits/c4419e4e65a8d9e0b5a15e9a5242453f261bee46.patch
-Patch12:        https://github.com/opencv/opencv/pull/13254/commits/ad35b79e3f98b4ce30481e0299cca550ed77aef0.patch
 
 BuildRequires:  gcc-c++
 BuildRequires:  libtool
@@ -237,21 +231,6 @@ to provide decent performance and stability.
 
 %prep
 %setup -q -a1
-# we don't use pre-built contribs except quirc
-mv 3rdparty/quirc/ .
-rm -r 3rdparty/
-mkdir 3rdparty/
-mv quirc/ 3rdparty/
-
-%patch1 -p1 -b .cmake_paths
-%patch10 -p1 -b .fix_support_YV12_too
-%ifarch %{ix86} %{arm}
-%endif
-
-pushd %{name}_contrib-%{version}
-%patch11 -p1 -b .cvv_repair_build
-popd
-%patch12 -p1 -b .fix_install_of_python_bindings
 
 %build
 # enabled by default if libraries are presents at build time:
@@ -308,6 +287,7 @@ pushd build
  %{?with_clp: -DWITH_CLP=ON } \
  %{?with_va: -DWITH_VA=ON } \
  %{!?with_vtk: -DWITH_VTK=OFF} \
+ -DOPENCV_GENERATE_PKGCONFIG=ON \
  ..
 
 # -DENABLE_CXX11=ON \
@@ -322,12 +302,12 @@ popd
 %install
 %make_install -C build
 find %{buildroot} -name '*.la' -delete
-rm -rf %{buildroot}%{_datadir}/OpenCV/licenses/
+rm -rf %{buildroot}%{_datadir}/licenses/
 %if %{with java}
-mv %{buildroot}/usr/share/OpenCV/java/libopencv_java%{javaver}.so %{buildroot}%{_libdir}
+mv %{buildroot}/usr/share/java/opencv4/libopencv_java%{javaver}.so %{buildroot}%{_libdir}
 ln -s -r %{buildroot}%{_libdir}/libopencv_java%{javaver}.so %{buildroot}%{_libdir}/libopencv_java.so
 mkdir -p %{buildroot}%{_jnidir}
-mv %{buildroot}/usr/share/OpenCV/java/opencv-%{javaver}.jar %{buildroot}%{_jnidir}/
+mv %{buildroot}/usr/share/java/opencv4/opencv-%{javaver}.jar %{buildroot}%{_jnidir}/
 ln -s -r %{buildroot}%{_jnidir}/opencv-%{javaver}.jar %{buildroot}%{_jnidir}/opencv.jar
 %endif
 
@@ -355,16 +335,17 @@ popd
 %doc README.md
 %license LICENSE
 %{_bindir}/opencv_*
-%dir %{_datadir}/OpenCV
-%{_datadir}/OpenCV/haarcascades
-%{_datadir}/OpenCV/lbpcascades
-%{_datadir}/OpenCV/valgrind*
+%dir %{_datadir}/opencv4
+%{_datadir}/opencv4/haarcascades
+%{_datadir}/opencv4/lbpcascades
+%{_datadir}/opencv4/valgrind*
 
 %files core
 %{_libdir}/libopencv_core.so.%{abiver}*
 %{_libdir}/libopencv_cvv.so.%{abiver}*
 %{_libdir}/libopencv_features2d.so.%{abiver}*
 %{_libdir}/libopencv_flann.so.%{abiver}*
+%{_libdir}/libopencv_gapi.so.%{abiver}*
 %{_libdir}/libopencv_hfs.so.%{abiver}*
 %{_libdir}/libopencv_highgui.so.%{abiver}*
 %{_libdir}/libopencv_imgcodecs.so.%{abiver}*
@@ -383,18 +364,17 @@ popd
 %endif
 
 %files devel
-%{_includedir}/opencv
-%{_includedir}/opencv2
+%{_includedir}/opencv4
 %{_libdir}/lib*.so
-%{_libdir}/pkgconfig/opencv.pc
-%{_libdir}/OpenCV/*.cmake
+%{_libdir}/pkgconfig/opencv4.pc
+%{_libdir}/cmake/opencv4/*.cmake
 
 %files doc
-%{_datadir}/OpenCV/samples
-%{_datadir}/OpenCV/doc
+%{_datadir}/opencv4/samples
+%{_datadir}/doc
 
 %files -n python3-opencv
-%{_bindir}/setup_vars_opencv3.sh
+%{_bindir}/setup_vars_opencv4.sh
 %{python3_sitearch}/cv2.cpython-3*.so
 
 %if %{with java}
@@ -425,6 +405,7 @@ popd
 %{_libdir}/libopencv_optflow.so.%{abiver}*
 %{_libdir}/libopencv_phase_unwrapping.so.%{abiver}*
 %{_libdir}/libopencv_plot.so.%{abiver}*
+%{_libdir}/libopencv_quality.so.%{abiver}*
 %{_libdir}/libopencv_reg.so.%{abiver}*
 %{_libdir}/libopencv_rgbd.so.%{abiver}*
 %{_libdir}/libopencv_saliency.so.%{abiver}*
@@ -438,6 +419,9 @@ popd
 %{_libdir}/libopencv_xphoto.so.%{abiver}*
 
 %changelog
+* Thu Aug 22 2019 Christopher N. Hesse <raymanfx@gmail.com> - 4.1.0
+- Update to 4.1.0
+
 * Mon May 20 2019 Sérgio Basto <sergio@serjux.com> - 3.4.4-10
 - Try improve Java Bindings
 
