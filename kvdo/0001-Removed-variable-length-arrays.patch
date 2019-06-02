@@ -1,0 +1,198 @@
+From c23a85eebf3a69880ff9a2b4d2a54b0b7cf2a05c Mon Sep 17 00:00:00 2001
+From: Michael Sclafani <sclafani@redhat.com>
+Date: Wed, 23 Jan 2019 11:53:31 +0000
+Subject: [PATCH] Removed variable-length-arrays
+
+---
+ uds/util/pathBuffer.c       |  6 ++++--
+ vdo/base/blockAllocator.c   | 16 ++++++++++++++--
+ vdo/base/blockMapRecovery.c | 16 ++++++++++++++--
+ vdo/base/heap.c             | 16 ++++------------
+ vdo/base/heap.h             | 12 ++++++++++++
+ 5 files changed, 48 insertions(+), 18 deletions(-)
+
+diff --git a/uds/util/pathBuffer.c b/uds/util/pathBuffer.c
+index 2658f9c..6dbc313 100644
+--- a/uds/util/pathBuffer.c
++++ b/uds/util/pathBuffer.c
+@@ -28,8 +28,10 @@
+ #include "stringUtils.h"
+ #include "uds.h"
+ 
+-static const size_t DEFAULT_PATH_BUFFER_SIZE = 128;
+-static const size_t PATH_BUFFER_QUANTUM      =  64;
++enum {
++  DEFAULT_PATH_BUFFER_SIZE = 128,
++  PATH_BUFFER_QUANTUM      =  64,
++};
+ 
+ /******************************************************************************/
+ void zeroPathBuffer(PathBuffer *pb)
+diff --git a/vdo/base/blockAllocator.c b/vdo/base/blockAllocator.c
+index 111dd4a..612536e 100644
+--- a/vdo/base/blockAllocator.c
++++ b/vdo/base/blockAllocator.c
+@@ -511,6 +511,18 @@ static int compareSlabStatuses(const void *item1, const void *item2)
+   return ((info1->slabNumber < info2->slabNumber) ? 1 : -1);
+ }
+ 
++/**
++ * Swap two SlabStatus structures. Implements HeapSwapper.
++ **/
++static void swapSlabStatuses(void *item1, void *item2)
++{
++  SlabStatus *info1 = item1;
++  SlabStatus *info2 = item2;
++  SlabStatus temp = *info1;
++  *info1 = *info2;
++  *info2 = temp;
++}
++
+ /**********************************************************************/
+ int prepareSlabsForAllocation(BlockAllocator *allocator)
+ {
+@@ -530,8 +542,8 @@ int prepareSlabsForAllocation(BlockAllocator *allocator)
+ 
+   // Sort the slabs by cleanliness, then by emptiness hint.
+   Heap heap;
+-  initializeHeap(&heap, compareSlabStatuses, slabStatuses, slabCount,
+-                 sizeof(SlabStatus));
++  initializeHeap(&heap, compareSlabStatuses, swapSlabStatuses,
++                 slabStatuses, slabCount, sizeof(SlabStatus));
+   buildHeap(&heap, slabCount);
+ 
+   SlabStatus currentSlabStatus;
+diff --git a/vdo/base/blockMapRecovery.c b/vdo/base/blockMapRecovery.c
+index cfb6123..a49ae6a 100644
+--- a/vdo/base/blockMapRecovery.c
++++ b/vdo/base/blockMapRecovery.c
+@@ -117,6 +117,18 @@ static int compareMappings(const void *item1, const void *item2)
+   return 0;
+ }
+ 
++/**
++ * Swap two NumberedBlockMapping structures. Implements HeapSwapper.
++ **/
++static void swapMappings(void *item1, void *item2)
++{
++  NumberedBlockMapping *mapping1 = item1;
++  NumberedBlockMapping *mapping2 = item2;
++  NumberedBlockMapping temp = *mapping1;
++  *mapping1 = *mapping2;
++  *mapping2 = temp;
++}
++
+ /**
+  * Convert a VDOCompletion to a BlockMapRecoveryCompletion.
+  *
+@@ -224,8 +236,8 @@ static int makeRecoveryCompletion(VDO                         *vdo,
+ 
+   // Organize the journal entries into a binary heap so we can iterate over
+   // them in sorted order incrementally, avoiding an expensive sort call.
+-  initializeHeap(&recovery->replayHeap, compareMappings, journalEntries,
+-                 entryCount, sizeof(NumberedBlockMapping));
++  initializeHeap(&recovery->replayHeap, compareMappings, swapMappings,
++                 journalEntries, entryCount, sizeof(NumberedBlockMapping));
+   buildHeap(&recovery->replayHeap, entryCount);
+ 
+   ASSERT_LOG_ONLY((getCallbackThreadID() == recovery->logicalThreadID),
+diff --git a/vdo/base/heap.c b/vdo/base/heap.c
+index d077664..7ff91b6 100644
+--- a/vdo/base/heap.c
++++ b/vdo/base/heap.c
+@@ -30,12 +30,14 @@
+ /**********************************************************************/
+ void initializeHeap(Heap           *heap,
+                     HeapComparator *comparator,
++                    HeapSwapper    *swapper,
+                     void           *array,
+                     size_t          capacity,
+                     size_t          elementSize)
+ {
+   *heap = (Heap) {
+     .comparator  = comparator,
++    .swapper     = swapper,
+     .capacity    = capacity,
+     .elementSize = elementSize,
+   };
+@@ -46,16 +48,6 @@ void initializeHeap(Heap           *heap,
+   }
+ }
+ 
+-/**********************************************************************/
+-static inline void swapElements(Heap *heap, size_t node1, size_t node2)
+-{
+-  byte temp[heap->elementSize];
+-
+-  memcpy(temp,                &heap->array[node1], heap->elementSize);
+-  memcpy(&heap->array[node1], &heap->array[node2], heap->elementSize);
+-  memcpy(&heap->array[node2], temp,                heap->elementSize);
+-}
+-
+ /**********************************************************************/
+ static void siftHeapDown(Heap *heap, size_t topNode, size_t lastNode)
+ {
+@@ -79,7 +71,7 @@ static void siftHeapDown(Heap *heap, size_t topNode, size_t lastNode)
+     }
+ 
+     // Swap the element we've been sifting down with the larger child.
+-    swapElements(heap, topNode, swapNode);
++    heap->swapper(&heap->array[topNode], &heap->array[swapNode]);
+ 
+     // Descend into the sub-heap rooted at that child, going around the loop
+     // again in place of a tail-recursive call to siftHeapDown().
+@@ -162,7 +154,7 @@ static inline size_t siftAndSort(Heap *heap, size_t rootNode, size_t lastNode)
+    * right-most leaf node in the heap, moving it to its sorted position in
+    * the array.
+    */
+-  swapElements(heap, rootNode, lastNode);
++  heap->swapper(&heap->array[rootNode], &heap->array[lastNode]);
+   // The sorted list is now one element larger and valid. The heap is
+   // one element smaller, and invalid.
+   lastNode -= heap->elementSize;
+diff --git a/vdo/base/heap.h b/vdo/base/heap.h
+index 5c9e6ae..bda85c7 100644
+--- a/vdo/base/heap.h
++++ b/vdo/base/heap.h
+@@ -38,6 +38,14 @@
+  **/
+ typedef int HeapComparator(const void *item1, const void *item2);
+ 
++/**
++ * Prototype for functions which swap two array elements.
++ *
++ * @param item1  The first element to swap
++ * @param item2  The second element to swap
++ **/
++typedef void HeapSwapper(void *item1, void *item2);
++
+ /**
+  * A heap array can be any array of fixed-length elements in which the heap
+  * invariant can be established. In a max-heap, every child of a node must be
+@@ -50,6 +58,8 @@ typedef struct heap {
+   byte           *array;
+   /** the function to use to compare two elements */
+   HeapComparator *comparator;
++  /** the function to use to swap two elements */
++  HeapSwapper    *swapper;
+   /** the maximum number of elements that can be stored */
+   size_t          capacity;
+   /** the size of every element (in bytes) */
+@@ -66,12 +76,14 @@ typedef struct heap {
+  *
+  * @param heap          The heap to initialize
+  * @param comparator    The function to use to compare two heap elements
++ * @param swapper       The function to use to swap two heap elements
+  * @param array         The array of elements (not modified by this call)
+  * @param capacity      The maximum number of elements which fit in the array
+  * @param elementSize   The size of every array element, in bytes
+  **/
+ void initializeHeap(Heap           *heap,
+                     HeapComparator *comparator,
++                    HeapSwapper    *swapper,
+                     void           *array,
+                     size_t          capacity,
+                     size_t          elementSize);
+-- 
+2.21.0
+
