@@ -26,7 +26,7 @@ Summary: The Linux kernel
 %global zcpu `nproc --all`
 %endif
 
-# define buildid .local
+%define buildid .local
 
 # baserelease defines which build revision of this kernel version we're
 # building.  We used to call this fedora_build, but the magical name
@@ -595,6 +595,11 @@ Patch530: crypto-ghash-fix-unaligned-memory-access-in-ghash_setkey.patch
 Patch534: 0001-HID-logitech-dj-Fix-forwarding-of-very-long-HID-repo.patch
 
 # END OF PATCH DEFINITIONS
+
+# CUSTOM (LOCAL) PATCHES
+
+# Ryzen VFIO PCI passthrough fix https://www.reddit.com/r/VFIO/comments/bqeixd/apparently_the_latest_bios_on_asrockmsi_boards/eo4neta/
+Patch999: 0001-pci-Fix-PCI-reset-issue-on-AMD-AGESA-0.0.7.2.patch
 
 %endif
 
