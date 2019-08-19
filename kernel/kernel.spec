@@ -50,7 +50,7 @@ Summary: The Linux kernel
 # base_sublevel is the kernel version we're starting with and patching
 # on top of -- for example, 3.1-rc7-git1 starts with a 3.0 base,
 # which yields a base_sublevel of 0.
-%define base_sublevel 1
+%define base_sublevel 2
 
 ## If this is a released kernel ##
 %if 0%{?released_kernel}
@@ -69,9 +69,9 @@ Summary: The Linux kernel
 # The next upstream release sublevel (base_sublevel+1)
 %define upstream_sublevel %(echo $((%{base_sublevel} + 1)))
 # The rc snapshot level
-%global rcrev 6
+%global rcrev 4
 # The git snapshot level
-%define gitrev 1
+%define gitrev 3
 # Set rpm version accordingly
 %define rpmversion 5.%{upstream_sublevel}.0
 %endif
@@ -365,7 +365,7 @@ Version: %{rpmversion}
 Release: %{pkg_release}
 # DO NOT CHANGE THE 'ExclusiveArch' LINE TO TEMPORARILY EXCLUDE AN ARCHITECTURE BUILD.
 # SET %%nobuildarches (ABOVE) INSTEAD
-ExclusiveArch: %{all_x86} x86_64 s390x %{arm} aarch64 ppc64le
+ExclusiveArch: x86_64 s390x %{arm} aarch64 ppc64le
 ExclusiveOS: Linux
 %ifnarch %{nobuildarches}
 Requires: kernel-core-uname-r = %{KVERREL}%{?variant}
@@ -551,26 +551,21 @@ Patch304: ACPI-irq-Workaround-firmware-issue-on-X-Gene-based-m400.patch
 # https://patchwork.kernel.org/project/linux-mmc/list/?submitter=71861
 Patch305: arm-sdhci-esdhc-imx-fixes.patch
 
-Patch306: arm64-rock960-enable-tsadc.patch
+# Fix accepted for 5.3 https://patchwork.kernel.org/patch/10992783/
+# Patch306: arm64-dts-rockchip-Update-DWC3-modules-on-RK3399-SoCs.patch
+
+# RHBZ Bug 1576593 - work around while vendor investigates
+Patch307: arm-make-highpte-not-expert.patch
 
 # Raspberry Pi bits
-Patch330: ARM-cpufreq-support-for-Raspberry-Pi.patch
-
-Patch331: watchdog-bcm2835_wdt-Fix-module-autoload.patch
-
-Patch332: bcm2835-camera-Restore-return-behavior-of-ctrl_set_bitrate.patch
-
-Patch333: bcm2835-vchiq-use-interruptible-waits.patch
+# Patch330: ARM-cpufreq-support-for-Raspberry-Pi.patch
 
 # Tegra bits
 Patch340: arm64-tegra-jetson-tx1-fixes.patch
+# https://www.spinics.net/lists/linux-tegra/msg43110.html
+Patch341: arm64-tegra-Jetson-TX2-Allow-bootloader-to-configure.patch
 
 # QCom ACPI device support pieces
-Patch350: arm64-qcom-pinctrl-support-for-ACPI.patch
-Patch351: arm64-acpi-ignore-5.1-fadts-reported-as-5.0.patch
-Patch352: arm64-acpi-make-ac-and-battery-drivers-available-on-non-x86.patch
-Patch353: arm64-qcom-DWC3-USB-Add-support-for-ACPI-based-AArch64-Laptops.patch
-Patch354: arm64-ufs-qcom-Add-support-for-platforms-booting-ACPI.patch
 
 # 400 - IBM (ppc/s390x) patches
 
@@ -579,20 +574,11 @@ Patch354: arm64-ufs-qcom-Add-support-for-platforms-booting-ACPI.patch
 Patch501: input-rmi4-remove-the-need-for-artifical-IRQ.patch
 
 # gcc9 fixes
-Patch506: 0001-s390-jump_label-Correct-asm-contraint.patch
 Patch507: 0001-Drop-that-for-now.patch
 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1701096
 # Submitted upstream at https://lkml.org/lkml/2019/4/23/89
 Patch508: KEYS-Make-use-of-platform-keyring-for-module-signature.patch
-
-# build fix
-Patch527: v2-powerpc-mm-mark-more-tlb-functions-as-__always_inline.patch
-
-Patch530: crypto-ghash-fix-unaligned-memory-access-in-ghash_setkey.patch
-
-# Fix for new Logitech wireless keyboard support in 5.2, submitted upstream
-Patch534: 0001-HID-logitech-dj-Fix-forwarding-of-very-long-HID-repo.patch
 
 # END OF PATCH DEFINITIONS
 
@@ -1380,7 +1366,6 @@ BuildKernel() {
     cp -a --parents tools/include/* $RPM_BUILD_ROOT/lib/modules/$KernelVer/build/
     cp -a --parents arch/x86/purgatory/purgatory.c $RPM_BUILD_ROOT/lib/modules/$KernelVer/build/
     cp -a --parents arch/x86/purgatory/stack.S $RPM_BUILD_ROOT/lib/modules/$KernelVer/build/
-    cp -a --parents arch/x86/purgatory/string.c $RPM_BUILD_ROOT/lib/modules/$KernelVer/build/
     cp -a --parents arch/x86/purgatory/setup-x86_64.S $RPM_BUILD_ROOT/lib/modules/$KernelVer/build/
     cp -a --parents arch/x86/purgatory/entry64.S $RPM_BUILD_ROOT/lib/modules/$KernelVer/build/
     cp -a --parents arch/x86/boot/string.h $RPM_BUILD_ROOT/lib/modules/$KernelVer/build/
@@ -1837,6 +1822,133 @@ fi
 #
 #
 %changelog
+* Fri Aug 16 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc4.git3.1
+- Linux v5.3-rc4-71-ga69e90512d9d
+
+* Thu Aug 15 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc4.git2.1
+- Linux v5.3-rc4-53-g41de59634046
+
+* Wed Aug 14 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc4.git1.1
+- Linux v5.3-rc4-4-gee1c7bd33e66
+
+* Wed Aug 14 2019 Laura Abbott <labbott@redhat.com>
+- Reenable debugging options.
+
+* Tue Aug 13 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc4.git0.1
+- Linux v5.3-rc4
+
+* Tue Aug 13 2019 Laura Abbott <labbott@redhat.com>
+- Disable debugging options.
+
+* Wed Aug 07 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc3.git1.1
+- Linux v5.3-rc3-282-g33920f1ec5bf
+
+* Wed Aug 07 2019 Laura Abbott <labbott@redhat.com>
+- Reenable debugging options.
+
+* Mon Aug 05 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc3.git0.1
+- Linux v5.3-rc3
+
+* Mon Aug 05 2019 Laura Abbott <labbott@redhat.com>
+- Disable debugging options.
+
+* Fri Aug 02 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc2.git4.1
+- Linux v5.3-rc2-70-g1e78030e5e5b
+
+* Thu Aug 01 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc2.git3.1
+- Linux v5.3-rc2-60-g5c6207539aea
+- Enable 8250 serial ports on powerpc
+
+* Wed Jul 31 2019 Peter Robinson <pbrobinson@fedoraproject.org> 5.3.0-0.rc2.git2.2
+- Enable IMA Appraisal
+
+* Wed Jul 31 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc2.git2.1
+- Linux v5.3-rc2-51-g4010b622f1d2
+
+* Tue Jul 30 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc2.git1.1
+- Linux v5.3-rc2-11-g2a11c76e5301
+
+* Tue Jul 30 2019 Laura Abbott <labbott@redhat.com>
+- Reenable debugging options.
+
+* Mon Jul 29 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc2.git0.1
+- Linux v5.3-rc2
+
+* Mon Jul 29 2019 Laura Abbott <labbott@redhat.com>
+- Disable debugging options.
+
+* Fri Jul 26 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc1.git4.1
+- Linux v5.3-rc1-96-g6789f873ed37
+- Enable nvram driver (rhbz 1732612)
+
+* Thu Jul 25 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc1.git3.1
+- Linux v5.3-rc1-82-gbed38c3e2dca
+
+* Wed Jul 24 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc1.git2.1
+- Linux v5.3-rc1-59-gad5e427e0f6b
+
+* Tue Jul 23 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc1.git1.1
+- Linux v5.3-rc1-56-g7b5cf701ea9c
+
+* Tue Jul 23 2019 Laura Abbott <labbott@redhat.com>
+- Reenable debugging options.
+
+* Sun Jul 21 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc1.git0.1
+- Linux v5.3-rc1
+
+* Sun Jul 21 2019 Laura Abbott <labbott@redhat.com>
+- Disable debugging options.
+
+* Fri Jul 19 2019 Peter Robinson <pbrobinson@fedoraproject.org>
+- RHBZ Bug 1576593 - work around while vendor investigates
+
+* Thu Jul 18 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc0.git7.1
+- Linux v5.2-11564-g22051d9c4a57
+
+* Wed Jul 17 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc0.git6.1
+- Linux v5.2-11043-g0a8ad0ffa4d8
+
+* Tue Jul 16 2019 Jeremy Cline <jcline@redhat.com>
+- Fix a firmware crash in Intel 7000 and 8000 devices (rhbz 1716334)
+
+* Tue Jul 16 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc0.git5.1
+- Linux v5.2-10808-g9637d517347e
+
+* Fri Jul 12 2019 Justin M. Forbes <jforbes@fedoraproject.org>
+- Turn off i686 builds
+
+* Fri Jul 12 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc0.git4.1
+- Linux v5.2-7109-gd7d170a8e357
+
+* Thu Jul 11 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc0.git3.1
+- Linux v5.2-3311-g5450e8a316a6
+
+* Wed Jul 10 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc0.git2.1
+- Linux v5.2-3135-ge9a83bd23220
+
+* Tue Jul 09 2019 Laura Abbott <labbott@redhat.com> - 5.3.0-0.rc0.git1.1
+- Linux v5.2-915-g5ad18b2e60b7
+
+* Tue Jul 09 2019 Laura Abbott <labbott@redhat.com>
+- Reenable debugging options.
+
+* Mon Jul 08 2019 Justin M. Forbes <jforbes@fedoraproject.org> - 5.2.0-1
+- Linux v5.2.0
+- Disable debugging options.
+
+* Wed Jul 03 2019 Justin M. Forbes <jforbes@fedoraproject.org> - 5.2.0-0.rc7.git1.1
+- Linux v5.2-rc7-8-geca94432934f
+- Reenable debugging options.
+
+* Mon Jul 01 2019 Justin M. Forbes <jforbes@fedoraproject.org> - 5.2.0-0.rc7.git0.1
+- Linux v5.2-rc7
+
+* Mon Jul 01 2019 Justin M. Forbes <jforbes@fedoraproject.org>
+- Disable debugging options.
+
+* Fri Jun 28 2019 Justin M. Forbes <jforbes@fedoraproject.org> - 5.2.0-0.rc6.git2.1
+- Linux v5.2-rc6-93-g556e2f6020bf
+
 * Tue Jun 25 2019 Justin M. Forbes <jforbes@fedoraproject.org> - 5.2.0-0.rc6.git1.1
 - Linux v5.2-rc6-15-g249155c20f9b
 - Reenable debugging options.
