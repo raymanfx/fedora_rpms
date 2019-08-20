@@ -1,0 +1,52 @@
+diff -ur xfdesktop-4.10.3.org/common/xfdesktop-common.c xfdesktop-4.10.3/common/xfdesktop-common.c
+--- xfdesktop-4.10.3.org/common/xfdesktop-common.c	2014-11-16 07:20:57.000000000 +0100
++++ xfdesktop-4.10.3/common/xfdesktop-common.c	2014-12-11 08:58:23.511865532 +0100
+@@ -102,26 +102,38 @@
+     items = 0;
+     files = g_strsplit(contents, "\n", -1);
+ 
++    g_free(contents); /* not needed anymore */
++
+     /* Since the first line is the file identifier, we need to skip it.
+      * Additionally, we want to skip blank lines. */
+-    for(i = 1; files[i] != NULL; i++) {
+-        if(g_strcmp0(files[i], "") != 0) {
+-            g_free(files[items]);
+-            files[items] = g_strdup(files[i]);
+-            DBG("files[items] %s", files[items]);
+-            items++;
++
++     /* a file with just the header will have only one line */
++
++    if(files[0] != NULL)
++    {
++        g_free(files[0]);   /* that's the only non-empty line we need to remove */
++        files[0] = NULL;
++        for(i = 1; files[i] != NULL; i++) {
++            if(g_strcmp0(files[i], "") != 0) {
++                files[items]=files[i];  /* move the string to the current item slot */
++
++                items++;
++            } else { 
++                g_free(files[i]);   /* free the irrelevant empty string */
++            }
+         }
++        files[items] = NULL; /* set the sentinel */
++
++        /* resize */
++        
++        files = g_realloc(files, sizeof(gchar *) * (items+1));
+     }
+-    files[items+1] = NULL;
+ 
+-    files = g_realloc(files, sizeof(gchar *) * (items+1));
+ 
+     DBG("items %d", items);
+     if(n_items)
+         *n_items = items;
+ 
+-    g_free(contents);
+-
+     return files;
+ }
+ 
