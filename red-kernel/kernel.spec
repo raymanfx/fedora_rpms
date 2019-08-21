@@ -608,6 +608,9 @@ Patch515: v2-drm-nouveau-Only-recalculate-PBN-VCPI-on-mode-connector-changes.pat
 # Ryzen VFIO PCI passthrough fix https://www.reddit.com/r/VFIO/comments/bqeixd/apparently_the_latest_bios_on_asrockmsi_boards/eo4neta/
 Patch1000: 0001-pci-Fix-PCI-reset-issue-on-AMD-AGESA-0.0.7.2.patch
 
+# Vega PCI bus reset workaround https://gist.github.com/numinit/1bbabff521e0451e5470d740e0eb82fd#file-fix-vega-reset-patch
+Patch1001: 0001-pci-quirks-Disable-AMD-Vega-Navi-bus-reset.patch
+
 # END OF CUSTOM PATCHES
 
 %endif

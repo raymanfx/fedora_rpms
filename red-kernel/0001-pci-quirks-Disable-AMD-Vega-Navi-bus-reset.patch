@@ -1,0 +1,35 @@
+From 1faf5ea20aebdf735d64e23b48cb32b6847f556b Mon Sep 17 00:00:00 2001
+From: Fedora Kernel Team <kernel-team@fedoraproject.org>
+Date: Wed, 21 Aug 2019 16:38:34 +0200
+Subject: [PATCH] pci: quirks: Disable AMD Vega/Navi bus reset
+
+Patch by numinit (GitHub):
+https://gist.github.com/numinit/1bbabff521e0451e5470d740e0eb82fd#file-fix-vega-reset-patch
+
+Signed-off-by: Fedora Kernel Team <kernel-team@fedoraproject.org>
+---
+ drivers/pci/quirks.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/pci/quirks.c b/drivers/pci/quirks.c
+index 0f16acc..1f40b00 100644
+--- a/drivers/pci/quirks.c
++++ b/drivers/pci/quirks.c
+@@ -3433,6 +3433,14 @@ DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_ATHEROS, 0x0034, quirk_no_bus_reset);
+  */
+ DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_CAVIUM, 0xa100, quirk_no_bus_reset);
+ 
++/*
++ * Radeon RX Vega and Navi devices break on bus reset. Oi...
++ * This is *not a real workaround* - disabling bus reset
++ * for your GPU may have unintended consequences.
++ */
++DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_ATI, 0x687f, quirk_no_bus_reset);
++DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_ATI, 0xaaf8, quirk_no_bus_reset);
++
+ static void quirk_no_pm_reset(struct pci_dev *dev)
+ {
+ 	/*
+-- 
+2.21.0
+
