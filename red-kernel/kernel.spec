@@ -603,6 +603,13 @@ Patch515: v2-drm-nouveau-Only-recalculate-PBN-VCPI-on-mode-connector-changes.pat
 
 # END OF PATCH DEFINITIONS
 
+# CUSTOM PATCHES
+
+# Ryzen VFIO PCI passthrough fix https://www.reddit.com/r/VFIO/comments/bqeixd/apparently_the_latest_bios_on_asrockmsi_boards/eo4neta/
+Patch1000: 0001-pci-Fix-PCI-reset-issue-on-AMD-AGESA-0.0.7.2.patch
+
+# END OF CUSTOM PATCHES
+
 %endif
 
 
