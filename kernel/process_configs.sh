@@ -1,1 +1,0 @@
-configs/process_configs.sh
