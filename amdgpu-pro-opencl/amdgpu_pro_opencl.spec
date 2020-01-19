@@ -1,15 +1,17 @@
-%define spec_release 1
+%global spec_release 1
+#
+%global amd_release 934563
+%global amd_distro ubuntu-18.04
 #
 #
 #
 Summary: AMDGPU Pro OpenCL components
 Name: amdgpu-pro-opencl
-Version: 19.20
+Version: 19.30
 Release: %{spec_release}%{?dist}
 License: Redistributable
-Source0: https://drivers.amd.com/drivers/linux/amdgpu-pro-%{version}-812932-ubuntu-18.04.tar.xz
+Source0: https://drivers.amd.com/drivers/linux/amdgpu-pro-%{version}-%{amd_release}-%{amd_distro}.tar.xz
 Requires: glibc >= 2.17
-Requires: libgcc >= 4.2
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 BuildRequires: dpkg
@@ -17,7 +19,7 @@ BuildRequires: dpkg
 ExclusiveArch: x86_64
 
 %description
-AMDGPU Pro OpenCL components, extracted from the official AMD Ubuntu driver
+AMDGPU Pro OpenCL components, extracted from the official AMD driver
 release package.
 
 This package provides the OpenCL binary driver as well as the ICD loader.
@@ -25,13 +27,13 @@ This package provides the OpenCL binary driver as well as the ICD loader.
 %global debug_package %{nil}
 
 %prep
-%setup -n amdgpu-pro-%{version}-812932-ubuntu-18.04
+%setup -n amdgpu-pro-%{version}-%{amd_release}-%{amd_distro}
 
 %build
-dpkg-deb -x libdrm-amdgpu-amdgpu1_2.4.97-812932_amd64.deb .
-dpkg-deb -x libdrm-amdgpu-common_1.0.0-812932_all.deb .
-dpkg-deb -x opencl-amdgpu-pro-icd_19.20-812932_amd64.deb .
-dpkg-deb -x opencl-orca-amdgpu-pro-icd_19.20-812932_amd64.deb .
+dpkg-deb -x libdrm-amdgpu-amdgpu1_2.4.98-%{amd_release}_amd64.deb .
+dpkg-deb -x libdrm-amdgpu-common_1.0.0-%{amd_release}_all.deb .
+dpkg-deb -x opencl-amdgpu-pro-icd_%{version}-%{amd_release}_amd64.deb .
+dpkg-deb -x opencl-orca-amdgpu-pro-icd_%{version}-%{amd_release}_amd64.deb .
 
 mkdir -p etc/ld.so.conf.d
 cat > etc/ld.so.conf.d/amdgpu-pro.conf <<EOF
@@ -66,5 +68,3 @@ ln -sf /opt/amdgpu/lib/x86_64-linux-gnu/libdrm_amdgpu.so.1.0.0 /opt/amdgpu/lib/x
 /opt/amdgpu/share/libdrm/amdgpu.ids
 
 %changelog
-* Thu Jun 13 2019 - J. corwin Coburn <corwin@redhat.com> - 6.2.1.102-1
-HASH(0x222cad8) 
