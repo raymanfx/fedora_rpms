@@ -1,37 +1,40 @@
 %define spec_release 1
 %define kmod_name		kvdo
-%define kmod_driver_version	6.2.1.48
+%define kmod_driver_version	6.2.1.138
 %define kmod_rpm_release	%{spec_release}
 %define kmod_kernel_version	3.10.0-693.el7
 
 # Disable the scanning for a debug package
 %global debug_package %{nil}
 
-#Source0:        kmod-%{kmod_name}-%{kmod_driver_version}.tgz
-Source0:        https://github.com/dm-vdo/%{kmod_name}/archive/%{kmod_driver_version}.tar.gz
+Name: kmod-kvdo
+Version: %{kmod_driver_version}
+Release: %{kmod_rpm_release}%{?dist}
+Summary: Kernel Modules for Virtual Data Optimizer
+License: GPLv2+
+Source0: https://github.com/dm-vdo/%{kmod_name}/archive/%{kmod_driver_version}.tar.gz
+URL: http://github.com/dm-vdo/kvdo
+BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+Requires: dkms
+Requires: kernel-devel >= %{kmod_kernel_version}
+Requires: make
+ExclusiveArch: x86_64
+ExcludeArch: s390
+ExcludeArch: s390x
+ExcludeArch: ppc
+ExcludeArch: ppc64
+ExcludeArch: ppc64le
+ExcludeArch: aarch64
+ExcludeArch: i686
 
-Name:		kmod-kvdo
-Version:	%{kmod_driver_version}
-Release:	%{kmod_rpm_release}%{?dist}
-Summary:	Kernel Modules for Virtual Data Optimizer
-License:	GPLv2+
-URL:		http://github.com/dm-vdo/kvdo
-BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
-Requires:       dkms
-Requires:	kernel-devel >= %{kmod_kernel_version}
-Requires:       make
-ExclusiveArch:	x86_64
-ExcludeArch:    s390
-ExcludeArch:    s390x
-ExcludeArch:    ppc
-ExcludeArch:    ppc64
-ExcludeArch:    ppc64le
-ExcludeArch:    aarch64
-ExcludeArch:    i686
+%if 0%{?suse_version}
+BuildRequires: dkms
+Source1: %{name}-rpmlintrc
+%endif
 
-# Patches to make vdo compile on Fedora 30
+# Make kvdo compile on openSUSE Tumbleweed and Fedora.
 BuildRequires: patch
-Patch11: 0001-Removed-variable-length-arrays.patch
+Patch0: 91bb180ef81bd95b49df9de611d5c80ccbb77e83.patch
 
 %description
 Virtual Data Optimizer (VDO) is a device mapper target that delivers
@@ -41,6 +44,8 @@ This package provides the kernel modules for VDO.
 
 %post
 set -x
+# Make sure there is no lingering source tree.
+rm -rf %{_sharedstatedir}/dkms/%{kmod_name}
 /usr/sbin/dkms --rpm_safe_upgrade add -m %{kmod_name} -v %{version}-%{kmod_driver_version}
 /usr/sbin/dkms --rpm_safe_upgrade build -m %{kmod_name} -v %{version}-%{kmod_driver_version}
 /usr/sbin/dkms --rpm_safe_upgrade install -m %{kmod_name} -v %{version}-%{kmod_driver_version}
@@ -59,7 +64,7 @@ done
 %prep
 %setup -n %{kmod_name}-%{kmod_driver_version}
 
-%patch11 -p1
+%patch0 -p1
 
 %build
 # Nothing doing here, as we're going to build on whatever kernel we end up
@@ -89,8 +94,9 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(644,root,root,755)
+%dir %{_usr}/src/%{kmod_name}-%{version}-%{kmod_driver_version}
 %{_usr}/src/%{kmod_name}-%{version}-%{kmod_driver_version}/*
 
 %changelog
-* Thu Apr 18 2019 - J. corwin Coburn <corwin@redhat.com> - 6.2.1.48-1
-HASH(0x15daa10)
+* Thu Aug 08 2019 - J. corwin Coburn <corwin@redhat.com> - 6.2.1.138-1
+HASH(0x2937968)

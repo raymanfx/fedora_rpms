@@ -1,0 +1,4 @@
+#
+# kvdo
+#
+addFilter("devel-file-in-non-devel-package")
